@@ -51,6 +51,7 @@ rm -rf /var/cache/yum
 
 
 ##texlive
+echo "installing texlive"
 cat > /tmp/texlive.profile << "EOF0"
 # texlive.profile
 selected_scheme scheme-medium
@@ -84,34 +85,36 @@ EOF0
 
 wget -q -O /tmp/install-tl-unx.tar.gz http://ftp.acc.umu.se/mirror/CTAN/systems/texlive/tlnet/install-tl-unx.tar.gz && \
     cd /tmp/ && tar xzf install-tl-unx.tar.gz
-PATH=$PATH:/usr/local/texlive/bin/x86_64-linux:/usr/local/cuda/bin:/opt/anaconda3/bin
-cd /tmp/install-tl-* && ./install-tl -profile /tmp/texlive.profile -no-verify-downloads -persistent-downloads
-
+cd /tmp/install-tl-* && ./install-tl -profile /tmp/texlive.profile -no-verify-downloads -persistent-downloads -q
 rm -rf /tmp/install-tl*
 
 
 #miniconda
+echo "installing miniconda"
 wget -q -O /tmp/Miniconda3.sh https://repo.anaconda.com/miniconda/Miniconda3-py37_4.8.3-Linux-x86_64.sh
 cd /tmp/&& bash /tmp/Miniconda3.sh -b -p /opt/anaconda3
 rm /tmp/Miniconda3.sh
 ln -s /opt/anaconda3/etc/profile.d/conda.sh /etc/profile.d/conda.sh
+PATH=$PATH:/usr/local/cuda/bin:/opt/anaconda3/bin
 
 
 #conda env
 . /etc/profile.d/conda.sh
+echo "installing conda extensions"
 conda activate
-conda install "numpy<1.17" hdf5 scipy numba numexpr mkl cython  "jupyterlab=2"  jupyter scikit-image appdirs mako scikit-learn  cupy "python>3.6" seaborn pandas line_profiler black ninja colorama
-conda install -c  conda-forge lmfit ipympl "nodejs>=12"  ptvsd xeus-python pytools nbdime "pip>=20.1"
-conda install -c conda-forge -c plotly jupyter-dash
+conda install -q -y "numpy<1.17" hdf5 scipy numba numexpr mkl cython  "jupyterlab=2"  jupyter scikit-image appdirs mako scikit-learn  cupy "python>3.6" seaborn pandas line_profiler black ninja colorama
+conda install -q -y -c  conda-forge lmfit ipympl "nodejs>=12"  ptvsd xeus-python pytools nbdime "pip>=20.1"
+conda install -q -y -c conda-forge -c plotly jupyter-dash
 
 #jupyterlab extensions
+echo "installing jlab extensions"
 jupyter labextension install @jupyter-widgets/jupyterlab-manager --no-build
 jupyter labextension install ipyvolume --no-build
 jupyter labextension install jupyter-threejs --no-build
 jupyter labextension install @krassowski/jupyterlab_go_to_definition --no-build
 jupyter labextension install @aquirdturtle/collapsible_headings --no-build
 jupyter labextension install @jupyterlab/google-drive --no-build
-pip install --upgrade jupyterlab-git jupyterlab_code_formatter  jupyterlab_latex
+pip install -q --upgrade jupyterlab-git jupyterlab_code_formatter  jupyterlab_latex
 jupyter lab build
 jupyter labextension install @jupyterlab/latex --no-build
 #jupyter labextension install @ryantam626/jupyterlab_code_formatter --no-build
@@ -132,6 +135,7 @@ rm -rf /tmp/npm*
 
 
 #pycuda
+echo "installing pycuda from pip"
 LIBRARY_PATH=/usr/local/cuda/lib64/stubs CPATH=/usr/local/cuda/include CUDA_ROOT=/usr/local/cuda pip install pycuda
 
 
