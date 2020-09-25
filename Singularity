@@ -19,7 +19,6 @@ PIP_TARGET=/opt/pip-packages
 export PIP_TARGET
 PYTHONPATH=/opt/pip-packages:$PYTHONPATH
 export PYTHONPATH
-export PATH
 MKLROOT=/opt/intel/compilers_and_libraries/linux/mkl
 export MKLROOT
 TBBROOT=/opt/intel/compilers_and_libraries/linux/tbb
@@ -35,8 +34,8 @@ PATH=$PATH:/opt/intel/compilers_and_libraries/linux/bin/intel64:/opt/intel/compi
 export PATH
 PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/opt/intel/compilers_and_libraries/linux/mkl/bin/pkgconfig
 export PKG_CONFIG_PATH
-
-
+LD_PRELOAD=/usr/local/lib64/mklpatch.so
+export LD_PRELOAD
 
 
 %post
@@ -45,7 +44,7 @@ yum-config-manager --add-repo https://yum.repos.intel.com/mkl/setup/intel-mkl.re
 yum -y install epel-release https://repo.ius.io/ius-release-el7.rpm
 yum update -y
 yum upgrade -y
-yum install -y mc unzip libtiff  make cmake binutils mosh less vim aria2  rsync openssh  screen  tmux htop curl  wget zsh  git224  perl-Digest-MD5 zip  binutils gcc gcc-c++ gettext  man man-pages libtool make patch elfutils  patchutils gdb diffutils intel-mkl openmpi-devel environment-modules  fontconfig freetype freetype-devel fontconfig-devel libstdc++
+yum install -y mc unzip libtiff  make cmake binutils mosh less vim aria2  rsync openssh  screen  tmux htop curl  wget zsh  git224  perl-Digest-MD5 zip  binutils gcc gcc-c++ gettext  man man-pages libtool make patch elfutils  patchutils gdb diffutils  openmpi-devel environment-modules  fontconfig freetype freetype-devel fontconfig-devel libstdc++ strace ltrace ghostscript intel-mkl perf
 yum clean all
 rm -rf /var/cache/yum
 
@@ -102,9 +101,9 @@ PATH=$PATH:/usr/local/cuda/bin:/opt/anaconda3/bin
 . /etc/profile.d/conda.sh
 echo "installing conda extensions"
 conda activate
-conda install -q -y "numpy<1.17" hdf5 scipy numba numexpr mkl cython  "jupyterlab=2"  jupyter scikit-image appdirs mako scikit-learn  cupy "python>3.6" seaborn pandas line_profiler black ninja colorama
+conda install -q -y "numpy<1.17" hdf5 scipy numba numexpr mkl cython  "jupyterlab=2"  jupyter scikit-image appdirs mako scikit-learn  cupy "python>3.6" seaborn pandas line_profiler black ninja colorama memory_profiler
 conda install -q -y -c  conda-forge lmfit ipympl "nodejs>=12"  ptvsd xeus-python pytools nbdime "pip>=20.1"
-conda install -q -y -c conda-forge -c plotly jupyter-dash
+conda install -q -y -c conda-forge -c plotly jupyter-dash ipyvolume jupyter-server-proxy
 
 #jupyterlab extensions
 echo "installing jlab extensions"
@@ -114,23 +113,39 @@ jupyter labextension install jupyter-threejs --no-build
 jupyter labextension install @krassowski/jupyterlab_go_to_definition --no-build
 jupyter labextension install @aquirdturtle/collapsible_headings --no-build
 jupyter labextension install @jupyterlab/google-drive --no-build
-pip install -q --upgrade jupyterlab-git jupyterlab_code_formatter  jupyterlab_latex
-jupyter lab build
+jupyter labextension install jupyterlab-plotly --no-build
+jupyter labextension install @jupyterlab/server-proxy
+
+pip install -q --upgrade jupyterlab-git jupyterlab_code_formatter  jupyterlab_latex jupyter-dash
 jupyter labextension install @jupyterlab/latex --no-build
-#jupyter labextension install @ryantam626/jupyterlab_code_formatter --no-build
+jupyter labextension install @ryantam626/jupyterlab_code_formatter --no-build
 jupyter labextension install @jupyterlab/git --no-build
 jupyter labextension install @jupyterlab/debugger --no-build
 jupyter labextension install  jupyterlab-dash --no-build
-jupyter lab build
-#jupyter serverextension enable --py jupyterlab_code_formatter --sys-prefix
+jupyter serverextension enable --py jupyterlab_code_formatter --sys-prefix
 jupyter serverextension enable --sys-prefix jupyterlab_latex
 jupyter serverextension enable --py jupyterlab_git --sys-prefix
 jupyter lab build
 
 #disable extensions not working with sdf hub
-jupyter labextension disable @jupyterlab/git
+#jupyter labextension disable @jupyterlab/git
 #jupyter labextension disable @ryantam626/jupyterlab_code_formatter
-jupyter labextension disable @jupyterlab/latex
+#jupyter labextension disable @jupyterlab/latex
+
+cat > /opt/anaconda3/etc/jupyter/jupyter_config.json << "EOF3"
+{
+  "NotebookApp": {
+    "nbserver_extensions": {
+      "jupyterlab_git": true,
+      "jupyterlab": true,
+      "jupyterlab_latex": true,
+      "nbdime": true,
+      "jupyterlab_code_formatter": true
+    }
+  }
+}
+EOF3
+
 rm -rf /tmp/npm*
 
 
@@ -170,8 +185,14 @@ rm -rf /root/.npm
 rm -rf /root/.cache
 
 
-
-
+#patch for mkl
+cat > /tmp/mklpatch.c << "EOF4"
+//https://danieldk.eu/Posts/2020-08-31-MKL-Zen.html
+int mkl_serv_intel_cpu_true() {
+  return 1;
+}
+"EOF4"
+gcc -shared -fPIC -o /usr/local/lib64/mklpatch.so /tmp/mklpatch.c
 %labels
     Maintainer zimmf
     Version 0.1-200910
